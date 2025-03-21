@@ -1,19 +1,21 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-import os
 
-def main(req, res):
+def main(context):
     try:
         # Parse input JSON
-        body = json.loads(req.body)
+        body = json.loads(context.req.body)
         district = body.get("district")
         case_no = body.get("case_no")
 
         if not district or not case_no:
-            return res.json({"error": "Missing district or case_no"}, status=400)
+            return context.res.json({"error": "Missing district or case_no"}, 400)
 
-        # URL for the case search (Modify if needed)
+        # Logging input data
+        context.log(f"Searching case in: {district}, Case No: {case_no}")
+
+        # Base URL for the case search
         base_url = "https://dsj.punjab.gov.pk/case-details"
         params = {"district": district, "case_no": case_no}
 
@@ -21,25 +23,36 @@ def main(req, res):
             "User-Agent": "Mozilla/5.0"
         }
 
-        response = requests.get(base_url, params=params, headers=headers)
-        
+        # Using session for better efficiency
+        with requests.Session() as session:
+            response = session.get(base_url, params=params, headers=headers)
+
+        # Logging response status
+        context.log(f"Response Code: {response.status_code}")
+
         if response.status_code != 200:
-            return res.json({"error": "Failed to fetch data"}, status=500)
+            return context.res.json({"error": f"Failed to fetch data, Status: {response.status_code}"}, 500)
 
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Extract case details (Modify selectors based on actual HTML structure)
+        # Extracting case details
         case_details = {}
-        labels = soup.find_all("td", class_="case-label")  # Modify selector
-        values = soup.find_all("td", class_="case-value")  # Modify selector
 
-        if not labels or not values:
-            return res.json({"error": "No case details found"}, status=404)
+        # Attempting multiple selectors for robustness
+        labels = soup.find_all("td", class_="case-label") or soup.find_all("th")
+        values = soup.find_all("td", class_="case-value") or soup.find_all("td")
+
+        if not labels or not values or len(labels) != len(values):
+            context.log("No case details found or structure mismatch")
+            return context.res.json({"error": "No case details found"}, 404)
 
         for label, value in zip(labels, values):
-            case_details[label.text.strip()] = value.text.strip()
+            case_details[label.get_text(strip=True)] = value.get_text(strip=True)
 
-        return res.json(case_details)
+        context.log(f"Case Details Fetched: {case_details}")
+
+        return context.res.json({"success": True, "data": case_details})
 
     except Exception as e:
-        return res.json({"error": str(e)}, status=500)
+        context.log(f"Error: {str(e)}")
+        return context.res.json({"error": str(e)}, 500)
