@@ -1,21 +1,25 @@
-import requests
+from appwrite.client import Client
+from appwrite.services.functions import Functions
+import json
 
-# Define API endpoint
-url = "http://67dd307b93ef125d26df.appwrite.global/"
+client = Client()
 
-# Input case details
-data = {
-    "district": "Kasur",  # Change district
-    "case_no": "145023"  # Change case number
-}
+(client
+  .set_project('67a4b32f0037187e3aef') # Your project ID
+)
 
-# Set headers
-headers = {
-    "Content-Type": "application/json"
-}
+functions = Functions(client)
 
-# Send request
-response = requests.post(url, json=data, headers=headers)
+result = functions.create_execution( 
+    function_id = '67dd373000179bf564bb', 
+    body = '{"district_id": "14","case_no": "145023"}',  # optional
+    path = '<PATH>',  # optional
+    method = 'GET',  # optional
+    headers = {} # optional
+)
 
-# Print response
-print(response)
+# Extract and parse response body
+response_body = json.loads(result['responseBody'])
+
+# Print formatted response data
+print(json.dumps(response_body, indent=2))
