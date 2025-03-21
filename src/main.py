@@ -31,24 +31,23 @@ def main(context):
     # Parse input JSON
     try:
         body = json.loads(context.req.body)
-        district = body.get("district")
+        district_id = body.get("district_id")
         case_no = body.get("case_no")
 
-        if not district or not case_no:
-            return context.res.json({"error": "Missing district or case_no"}, 400)
+        if not district_id or not case_no:
+            return context.res.json({"error": "Missing district_id or case_no"}, 400)
 
-        context.log(f"Fetching case details for District: {district}, Case No: {case_no}")
+        context.log(f"Fetching case details for District ID: {district_id}, Case No: {case_no}")
 
-        # Case search URL
-        base_url = "https://dsj.punjab.gov.pk/case-details"
-        params = {"district": district, "case_no": case_no}
+        # Construct the search URL
+        search_url = f"https://dsj.punjab.gov.pk/search?district_id={district_id}&case_title=&case_no={case_no}&court_id=&casecate_id=0&fir_no=&fir_year=&policestation_id="
 
         headers = {
             "User-Agent": "Mozilla/5.0"
         }
 
         # Send request
-        response = requests.get(base_url, params=params, headers=headers)
+        response = requests.get(search_url, headers=headers)
 
         context.log(f"Response Code: {response.status_code}")
 
@@ -58,7 +57,7 @@ def main(context):
         # Parse response
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Extract case details (Adjust selectors based on actual HTML)
+        # Extract case details (Modify selectors based on actual HTML)
         case_details = {}
         labels = soup.find_all("td", class_="case-label") or soup.find_all("th")
         values = soup.find_all("td", class_="case-value") or soup.find_all("td")
